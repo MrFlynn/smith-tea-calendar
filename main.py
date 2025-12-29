@@ -16,36 +16,31 @@
 
 import asyncio
 import os
+from datetime import datetime
 
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
 
 
 async def main() -> None:
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch()
+        browser = await playwright.chromium.launch(headless=True)
 
         # Go to login page
         page = await browser.new_page()
-        await page.goto("https://www.smithtea.com/account/login")
-        await page.wait_for_load_state("domcontentloaded")
+        _ = await page.goto(
+            "https://www.smithtea.com/account/login", wait_until="domcontentloaded"
+        )
 
         print("got to login page")
 
         # Step 1: sign in
-        await page.locator("#CustomerEmail").fill(
-            os.getenv("SMITH_TEA_EMAIL", ""), force=True
-        )
-        await page.locator("#CustomerPassword").fill(
-            os.getenv("SMITH_TEA_PASSWORD", ""),
-            force=True,
-        )
-
         await page.get_by_label("Close dialog").click(force=True)
 
-        await page.locator("button div:has-text('Sign in')").is_visible()
-        await page.locator("button div:has-text('Sign in')").click(force=True)
-
-        await page.screenshot(path="login.png", full_page=True)
+        await page.locator("#CustomerEmail").fill(os.getenv("SMITH_TEA_EMAIL", ""))
+        await page.locator("#CustomerPassword").fill(
+            os.getenv("SMITH_TEA_PASSWORD", "")
+        )
+        await page.locator("button div:has-text('Sign in')").click()
 
         print("signed in")
 
@@ -58,15 +53,25 @@ async def main() -> None:
         # Step 3: navigate to subscriptions
         await page.wait_for_load_state("domcontentloaded")
         await page.locator("a[aria-label='Future orders']").click()
-        await page.wait_for_load_state("domcontentloaded")
+        await expect(
+            page.locator(".recharge-component-order-item").first
+        ).to_be_visible(timeout=10000)
 
         print("loading future orders")
 
         # Step 4: get subscriptions
         for order in await page.locator(".recharge-component-order-item").all():
-            print(await order.locator(".recharge-heading").text_content())
-            print(await order.locator(".recharge-text").text_content())
-            print("---")
+            try:
+                print(
+                    datetime.strptime(
+                        await order.locator(".recharge-heading").text_content() or "",
+                        "%a, %B %d, %Y",
+                    )
+                )
+                print(await order.locator(".recharge-text").text_content())
+                print("---")
+            except ValueError:
+                pass
 
         await browser.close()
 
