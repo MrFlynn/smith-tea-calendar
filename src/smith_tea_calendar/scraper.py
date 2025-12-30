@@ -1,13 +1,14 @@
 import itertools
 import logging
 import re
+import sys
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from datetime import datetime
 
 import click
 from ical.event import Event, EventStatus
-from playwright.async_api import Page, async_playwright, expect
+from playwright.async_api import Error, Page, async_playwright, expect
 
 logger = logging.getLogger(__name__)
 
@@ -127,20 +128,32 @@ class SmithTeaScraper:
         logger.debug("Configured selectors", extra=self.config.__dict__)
 
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch()
+            try:
+                browser = await playwright.chromium.launch()
 
-            page = await browser.new_page()
-            _ = await page.goto(
-                "https://www.smithtea.com/account/login", wait_until="domcontentloaded"
-            )
+                page = await browser.new_page()
+                _ = await page.goto(
+                    "https://www.smithtea.com/account/login",
+                    wait_until="domcontentloaded",
+                )
 
-            logger.debug("Launched chrome and loaded login page")
+                logger.debug("Launched chrome and loaded login page")
 
-            await self._login(ctx, page)
-            await self._goto_subscriptions(page)
-            await self._goto_future_orders(page)
+                await self._login(ctx, page)
+                await self._goto_subscriptions(page)
+                await self._goto_future_orders(page)
 
-            async for event in self._extract_orders(page):
-                yield event
+                async for event in self._extract_orders(page):
+                    yield event
 
-            await browser.close()
+                await browser.close()
+            except Error:
+                logging.critical(
+                    "Error occured while scraping subscriptions. The page layout may have changed, ",
+                    "so you may need to use inspect element to determine which CSS selectors to ",
+                    "use so this program can correctly navigate the site. Ensure you have the ",
+                    "correct credentials.",
+                    exc_info=True,
+                )
+
+                sys.exit(1)
