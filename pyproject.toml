@@ -9,3 +9,10 @@ dependencies = [
     "ical>=12.1.2",
     "playwright>=1.57.0",
 ]
+
+[build-system]
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
+
+[project.scripts]
+smith-tea-calendar = "smith_tea_calendar:cli"
