@@ -5,7 +5,7 @@ import click
 from .scraper import ScraperConfig, SmithTeaScraper
 
 
-@click.command()
+@click.command(context_settings={"auto_envvar_prefix": "SMITH_TEA"})
 @click.option("--email", required=True)
 @click.option("--password", required=True)
 @ScraperConfig.add_options
