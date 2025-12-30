@@ -1,82 +1,65 @@
-# Notes
-## Login page:
-### email: id=CustomerEmail
-### password: id=CustomerPassword
-### button: contains div with text "Sign in"
-#
-## Account Page:
-### Click link with text "Manage Subscriptions"
-### Sometimes contains promotions, so I'll need to figure out how to handle that
-#
-## Future orders:
-### Click a with aria-label "Future orders"
-### Orders can be retrieved from class "recharge-component-order-item"
-#### Date for order can be retrieved from class ".recharge-heading"
-#### Order contents can be retrieved from class ".recharge-text"
-
-import asyncio
-import os
+import argparse
+from collections.abc import AsyncIterator
 from datetime import datetime
 
-from playwright.async_api import async_playwright, expect
+from ical.event import Event, EventStatus
+from playwright.async_api import Page, async_playwright, expect
 
 
-async def main() -> None:
-    async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(headless=True)
+class SmithTeaScraper:
+    def __init__(self) -> None:
+        pass
 
-        # Go to login page
-        page = await browser.new_page()
-        _ = await page.goto(
-            "https://www.smithtea.com/account/login", wait_until="domcontentloaded"
-        )
-
-        print("got to login page")
-
-        # Step 1: sign in
+    async def _login(self, page: Page, args: argparse.Namespace) -> None:
+        # TODO: hack to close dialogs. Ideally we should just be able to ignore any dialogs
+        # being up and just continue with waiting.
         await page.get_by_label("Close dialog").click(force=True)
 
-        await page.locator("#CustomerEmail").fill(os.getenv("SMITH_TEA_EMAIL", ""))
-        await page.locator("#CustomerPassword").fill(
-            os.getenv("SMITH_TEA_PASSWORD", "")
-        )
+        await page.locator("#CustomerEmail").fill(args.login_email)
+        await page.locator("#CustomerPassword").fill(args.login_password)
         await page.locator("button div:has-text('Sign in')").click()
 
-        print("signed in")
-
-        # Step 2: navigate to orders
+    async def _goto_subscriptions(self, page: Page) -> None:
         await page.wait_for_load_state("domcontentloaded")
         await page.locator("a:has-text('Manage Subscriptions')").click()
 
-        print("loading manage subscriptions")
-
-        # Step 3: navigate to subscriptions
+    async def _goto_future_orders(self, page: Page) -> None:
         await page.wait_for_load_state("domcontentloaded")
         await page.locator("a[aria-label='Future orders']").click()
+
+        # Wait for orders to be loaded on the page.
         await expect(
             page.locator(".recharge-component-order-item").first
         ).to_be_visible(timeout=10000)
 
-        print("loading future orders")
-
-        # Step 4: get subscriptions
+    async def _extract_orders(self, page: Page) -> AsyncIterator[Event]:
         for order in await page.locator(".recharge-component-order-item").all():
             try:
-                print(
-                    datetime.strptime(
+                yield Event(
+                    dtstart=datetime.strptime(
                         await order.locator(".recharge-heading").text_content() or "",
                         "%a, %B %d, %Y",
-                    )
+                    ),
+                    summary=await order.locator(".recharge-text").text_content(),
+                    status=EventStatus.CONFIRMED,
                 )
-                print(await order.locator(".recharge-text").text_content())
-                print("---")
             except ValueError:
                 pass
 
-        await browser.close()
+    async def run(self, args: argparse.Namespace) -> AsyncIterator[Event]:
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch()
 
-    return
+            page = await browser.new_page()
+            _ = await page.goto(
+                "https://www.smithtea.com/account/login", wait_until="domcontentloaded"
+            )
 
+            await self._login(page, args)
+            await self._goto_subscriptions(page)
+            await self._goto_future_orders(page)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+            async for event in self._extract_orders(page):
+                yield event
+
+            await browser.close()
