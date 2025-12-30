@@ -1,4 +1,6 @@
 import argparse
+import itertools
+import re
 from collections.abc import AsyncIterator
 from datetime import datetime
 
@@ -35,12 +37,35 @@ class SmithTeaScraper:
     async def _extract_orders(self, page: Page) -> AsyncIterator[Event]:
         for order in await page.locator(".recharge-component-order-item").all():
             try:
+                summary = "Smith Tea Subscription Renewal"
+                description_lines = list(
+                    itertools.chain.from_iterable(
+                        map(
+                            lambda text: text.split("\n"),
+                            await order.locator(".recharge_text").all_text_contents(),
+                        )
+                    )
+                )
+
+                if len(description_lines) == 1:
+                    if match := re.match(
+                        r"^\d+ x (.*) (?:\[.*\])?$", description_lines[0]
+                    ):
+                        summary = f"Smith Tea Order - {match.group(1)}"
+
                 yield Event(
                     dtstart=datetime.strptime(
                         await order.locator(".recharge-heading").text_content() or "",
                         "%a, %B %d, %Y",
                     ),
-                    summary=await order.locator(".recharge-text").text_content(),
+                    summary=summary,
+                    description="\n".join(
+                        [
+                            *description_lines,
+                            "",
+                            "Manage your order at https://www.smithtea.com/tools/recurring/login",
+                        ]
+                    ),
                     status=EventStatus.CONFIRMED,
                 )
             except ValueError:
