@@ -92,7 +92,7 @@ class SmithTeaScraper:
                         await order.locator(self.config.order_heading).text_content()
                         or "",
                         "%a, %B %d, %Y",
-                    ),
+                    ).replace(tzinfo=datetime.now().astimezone().tzinfo),
                     summary=summary,
                     description="\n".join(
                         [
