@@ -43,6 +43,8 @@ class ScraperConfig:
 
 
 class SmithTeaScraper:
+    """Scrape your Smith Tea account for upcoming subscription renewals"""
+
     def __init__(self, config: ScraperConfig | None = None) -> None:
         self.config = config or ScraperConfig()
 
@@ -120,6 +122,11 @@ class SmithTeaScraper:
         logger.info(f"Found {i + 1} new orders")
 
     async def run(self, ctx: click.Context) -> AsyncIterator[Event]:
+        """
+        Execute scraping. Starts a headless Chromium instance, logs into your account, navigates
+        to the right page, and scrapes upcomning orders and returns them in a parsed iCal format.
+        """
+
         # Extract ScraperConfig from context if provided via add_options
         for name in ScraperConfig.__dataclass_fields__:
             if f"selector_{name}" in ctx.params:

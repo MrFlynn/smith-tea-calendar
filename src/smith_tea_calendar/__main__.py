@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 )
 @click.pass_context
 def cli(ctx: click.Context, log_level: str, calendar: pathlib.Path, **kwargs) -> None:
+    """Create an iCal file containing upcoming Smith Tea subscription renewals"""
     logger.setLevel(logging.getLevelNamesMapping()[log_level.upper()])
 
     asyncio.run(run(ctx, calendar))
