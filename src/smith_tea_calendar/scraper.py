@@ -1,4 +1,5 @@
 import itertools
+import logging
 import re
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
@@ -7,6 +8,8 @@ from datetime import datetime
 import click
 from ical.event import Event, EventStatus
 from playwright.async_api import Page, async_playwright, expect
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -53,9 +56,13 @@ class SmithTeaScraper:
         )
         await page.locator(self.config.sign_in_button).click()
 
+        logger.debug("Successfully logged into Smith Tea account")
+
     async def _goto_subscriptions(self, page: Page) -> None:
         await page.wait_for_load_state("domcontentloaded")
         await page.locator(self.config.manage_subscriptions).click()
+
+        logger.debug("Loaded subscriptions")
 
     async def _goto_future_orders(self, page: Page) -> None:
         await page.wait_for_load_state("domcontentloaded")
@@ -66,8 +73,11 @@ class SmithTeaScraper:
             timeout=10000
         )
 
+        logger.debug("Loaded future orders")
+
     async def _extract_orders(self, page: Page) -> AsyncIterator[Event]:
-        for order in await page.locator(self.config.order_item).all():
+        i = 0
+        for i, order in enumerate(await page.locator(self.config.order_item).all()):
             try:
                 summary = "Smith Tea Subscription Renewal"
                 description_lines = list(
@@ -104,13 +114,17 @@ class SmithTeaScraper:
                     status=EventStatus.CONFIRMED,
                 )
             except ValueError:
-                pass
+                logger.exception("Invalid date in recurring order")
+
+        logger.info(f"Found {i + 1} new orders")
 
     async def run(self, ctx: click.Context) -> AsyncIterator[Event]:
         # Extract ScraperConfig from context if provided via add_options
         for name in ScraperConfig.__dataclass_fields__:
             if f"selector_{name}" in ctx.params:
-                setattr(self, name, ctx.params[f"selector_{name}"])
+                setattr(self.config, name, ctx.params[f"selector_{name}"])
+
+        logger.debug("Configured selectors", extra=self.config.__dict__)
 
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch()
@@ -119,6 +133,8 @@ class SmithTeaScraper:
             _ = await page.goto(
                 "https://www.smithtea.com/account/login", wait_until="domcontentloaded"
             )
+
+            logger.debug("Launched chrome and loaded login page")
 
             await self._login(ctx, page)
             await self._goto_subscriptions(page)
