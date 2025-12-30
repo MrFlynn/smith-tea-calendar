@@ -6,7 +6,7 @@ from .scraper import ScraperConfig, SmithTeaScraper
 
 
 @click.command()
-@click.option("--username", required=True)
+@click.option("--email", required=True)
 @click.option("--password", required=True)
 @ScraperConfig.add_options
 @click.pass_context

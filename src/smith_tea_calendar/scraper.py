@@ -47,7 +47,7 @@ class SmithTeaScraper:
         # being up and just continue with waiting.
         await page.get_by_label("Close dialog").click(force=True)
 
-        await page.locator(self.config.login_email).fill(ctx.params.get("username", ""))
+        await page.locator(self.config.login_email).fill(ctx.params.get("email", ""))
         await page.locator(self.config.login_password).fill(
             ctx.params.get("password", "")
         )
