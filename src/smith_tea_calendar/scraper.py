@@ -10,7 +10,7 @@ import click
 from ical.event import Event, EventStatus
 from playwright.async_api import Error, Page, async_playwright, expect
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 
 
 @dataclass
@@ -119,7 +119,7 @@ class SmithTeaScraper:
             except ValueError:
                 logger.exception("Invalid date in recurring order")
 
-        logger.info(f"Found {i + 1} new orders")
+        logger.info(f"Found {i + 1} recurring order{'s' if i > 0 else ''}")
 
     async def run(self, ctx: click.Context) -> AsyncIterator[Event]:
         """
@@ -156,10 +156,10 @@ class SmithTeaScraper:
                 await browser.close()
             except Error:
                 logging.critical(
-                    "Error occured while scraping subscriptions. The page layout may have changed, ",
-                    "so you may need to use inspect element to determine which CSS selectors to ",
-                    "use so this program can correctly navigate the site. Ensure you have the ",
-                    "correct credentials.",
+                    "Error occured while scraping subscriptions. The page layout may have changed, "
+                    + "so you may need to use inspect element to determine which CSS selectors to "
+                    + "use so this program can correctly navigate the site. Ensure you have the "
+                    + "correct credentials.",
                     exc_info=True,
                 )
 

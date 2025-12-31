@@ -12,7 +12,7 @@ from ical.exceptions import CalendarParseError
 
 from .scraper import ScraperConfig, SmithTeaScraper
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 
 
 @click.command(context_settings={"auto_envvar_prefix": "SMITH_TEA"})
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 @click.pass_context
 def cli(ctx: click.Context, log_level: str, calendar: pathlib.Path, **kwargs) -> None:
     """Create an iCal file containing upcoming Smith Tea subscription renewals"""
-    logger.setLevel(logging.getLevelNamesMapping()[log_level.upper()])
+    logger.root.setLevel(logging.getLevelNamesMapping()[log_level.upper()])
 
     asyncio.run(run(ctx, calendar))
 
@@ -76,7 +76,10 @@ async def run(ctx: click.Context, calendar_file: pathlib.Path):
             )
         )
 
-        logger.info(f"Added {len(calendar.events) - existing_events_count} new orders")
+        logger.info(
+            f"Added {len(calendar.events) - existing_events_count} new orders, "
+            + f"skipped {existing_events_count} existing orders"
+        )
 
         ics_file.seek(0)
         ics_file.write(IcsCalendarStream.calendar_to_ics(calendar))
