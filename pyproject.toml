@@ -1,6 +1,6 @@
 [project]
 name = "smith-tea-calendar"
-version = "0.1.0"
+version = "0.1.1"
 description = "Create an iCal file containing upcoming Smith Tea subscription renewals"
 readme = "README.md"
 requires-python = ">=3.13"
