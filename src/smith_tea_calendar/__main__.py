@@ -46,9 +46,12 @@ def cli(ctx: click.Context, log_level: str, calendar: pathlib.Path, **kwargs) ->
 
 async def run(ctx: click.Context, calendar_file: pathlib.Path):
     scraper = SmithTeaScraper()
-    calendar_file_exists = not calendar_file.exists()
+    calendar_file_exists = calendar_file.exists()
 
-    with calendar_file.open("w+") as ics_file:
+    if not calendar_file_exists:
+        calendar_file.touch()
+
+    with calendar_file.open("r+") as ics_file:
         calendar = Calendar(prodid="github.com/mrflynn/smith-tea-calendar")
 
         if calendar_file_exists:
