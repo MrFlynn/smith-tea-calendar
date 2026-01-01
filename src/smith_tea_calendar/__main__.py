@@ -66,7 +66,7 @@ async def run(ctx: click.Context, calendar_file: pathlib.Path):
                 sys.exit(1)
 
         def event_keys(event: Event) -> tuple[date | datetime | str | None, ...]:
-            return (event.dtstart, event.summary, event.description)
+            return (event.dtstart, event.dtend, event.summary, event.description)
 
         existing_events_count = len(calendar.events)
         calendar.events.extend(

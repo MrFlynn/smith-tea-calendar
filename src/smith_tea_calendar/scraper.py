@@ -4,7 +4,7 @@ import re
 import sys
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, timedelta
 
 import click
 from ical.event import Event, EventStatus
@@ -100,12 +100,14 @@ class SmithTeaScraper:
                     ):
                         summary = f"Smith Tea Order - {match.group(1)}"
 
+                start = date.strptime(
+                    await order.locator(self.config.order_heading).text_content() or "",
+                    "%a, %B %d, %Y",
+                )
+
                 yield Event(
-                    dtstart=datetime.strptime(
-                        await order.locator(self.config.order_heading).text_content()
-                        or "",
-                        "%a, %B %d, %Y",
-                    ).replace(tzinfo=datetime.now().astimezone().tzinfo),
+                    dtstart=start,
+                    dtend=start + timedelta(days=1),
                     summary=summary,
                     description="\n".join(
                         [

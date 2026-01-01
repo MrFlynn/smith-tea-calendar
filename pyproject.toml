@@ -3,7 +3,7 @@ name = "smith-tea-calendar"
 version = "0.1.1"
 description = "Create an iCal file containing upcoming Smith Tea subscription renewals"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "click>=8.3.1",
     "ical>=12.1.2",
